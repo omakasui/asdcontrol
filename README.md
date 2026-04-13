@@ -1,7 +1,3 @@
-## NO LONGER MAINTAINED
-
-> [!WARNING]  
-> This software is no longer maintained. I no longer own an Apple Studio Display.
 
 # Apple Display Brightness Control
 
