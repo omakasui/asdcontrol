@@ -1,0 +1,115 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-deb:
+    name: Build .deb (${{ matrix.arch }})
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - arch: amd64
+            cxx: g++
+            strip: strip
+            packages: ""
+          - arch: arm64
+            cxx: aarch64-linux-gnu-g++
+            strip: aarch64-linux-gnu-strip
+            packages: g++-aarch64-linux-gnu binutils-aarch64-linux-gnu
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y dpkg-dev ${{ matrix.packages }}
+
+      - name: Build
+        run: |
+          make CXX=${{ matrix.cxx }}
+          ${{ matrix.strip }} asdcontrol
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          VERSION=$(grep -oP '(?<=#define VERSION ")[^"]+' asdcontrol.cpp)
+
+          install -Dm755 asdcontrol             deb-pkg/usr/local/bin/asdcontrol
+          install -dm755                         deb-pkg/usr/lib/udev/rules.d
+
+          printf 'KERNEL=="hiddev*", ATTRS{idVendor}=="05ac", ATTRS{idProduct}=="9243", GROUP="users", OWNER="root", MODE="0660"\n' \
+            >  deb-pkg/usr/lib/udev/rules.d/60-asdcontrol.rules
+          printf 'KERNEL=="hiddev*", ATTRS{idVendor}=="05ac", ATTRS{idProduct}=="1114", GROUP="users", OWNER="root", MODE="0660"\n' \
+            >> deb-pkg/usr/lib/udev/rules.d/60-asdcontrol.rules
+
+          install -dm755 deb-pkg/DEBIAN
+
+          cat > deb-pkg/DEBIAN/postinst << 'EOF'
+          #!/bin/sh
+          set -e
+          case "$1" in
+            configure)
+              udevadm control --reload-rules
+              udevadm trigger --subsystem-match=usb || true
+              ;;
+          esac
+          EOF
+
+          cat > deb-pkg/DEBIAN/postrm << 'EOF'
+          #!/bin/sh
+          set -e
+          case "$1" in
+            remove|purge)
+              udevadm control --reload-rules || true
+              ;;
+          esac
+          EOF
+
+          chmod 0755 deb-pkg/DEBIAN/postinst deb-pkg/DEBIAN/postrm
+
+          printf 'Package: asdcontrol\nVersion: %s\nArchitecture: %s\nMaintainer: Nicholas K. Dionysopoulos\nSection: utils\nPriority: optional\nHomepage: https://github.com/omakasui/asdcontrol\nDepends: udev\nDescription: Apple Display Brightness Control\n Brightness control for Apple Pro Display XDR and Studio Display on Linux.\n Includes udev rules for sudo-less HID device access.\n' \
+            "$VERSION" "${{ matrix.arch }}" > deb-pkg/DEBIAN/control
+
+          dpkg-deb --build deb-pkg "asdcontrol_${VERSION}_${{ matrix.arch }}.deb"
+
+      - name: Upload to release
+        run: gh release upload "$GITHUB_REF_NAME" asdcontrol_*.deb --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  update-build-packages:
+    name: Bump asdcontrol in build-apt-packages
+    needs: build-deb
+    runs-on: ubuntu-latest
+    steps:
+      - name: Update versions.yml
+        env:
+          GH_TOKEN: ${{ secrets.PACKAGES_PAT }}
+        run: |
+          set -euo pipefail
+          VERSION="${GITHUB_REF_NAME#v}"
+
+          RESPONSE=$(gh api repos/omakasui/build-apt-packages/contents/versions.yml)
+          SHA=$(echo "$RESPONSE" | jq -r '.sha')
+          OLD=$(echo "$RESPONSE" | jq -r '.content' | base64 -d)
+
+          NEW=$(echo "$OLD" | awk -v ver="$VERSION" '
+            /^asdcontrol:/ { found=1 }
+            found && /^  version:/ { sub(/"[^"]*"/, "\"" ver "\""); found=0 }
+            { print }
+          ')
+
+          gh api repos/omakasui/build-apt-packages/contents/versions.yml \
+            --method PUT \
+            --field message="chore: bump asdcontrol to ${VERSION}" \
+            --field content="$(echo "$NEW" | base64 -w 0)" \
+            --field sha="$SHA"
+
