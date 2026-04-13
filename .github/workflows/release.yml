@@ -85,31 +85,3 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  update-build-packages:
-    name: Bump asdcontrol in build-apt-packages
-    needs: build-deb
-    runs-on: ubuntu-latest
-    steps:
-      - name: Update versions.yml
-        env:
-          GH_TOKEN: ${{ secrets.PACKAGES_PAT }}
-        run: |
-          set -euo pipefail
-          VERSION="${GITHUB_REF_NAME#v}"
-
-          RESPONSE=$(gh api repos/omakasui/build-apt-packages/contents/versions.yml)
-          SHA=$(echo "$RESPONSE" | jq -r '.sha')
-          OLD=$(echo "$RESPONSE" | jq -r '.content' | base64 -d)
-
-          NEW=$(echo "$OLD" | awk -v ver="$VERSION" '
-            /^asdcontrol:/ { found=1 }
-            found && /^  version:/ { sub(/"[^"]*"/, "\"" ver "\""); found=0 }
-            { print }
-          ')
-
-          gh api repos/omakasui/build-apt-packages/contents/versions.yml \
-            --method PUT \
-            --field message="chore: bump asdcontrol to ${VERSION}" \
-            --field content="$(echo "$NEW" | base64 -w 0)" \
-            --field sha="$SHA"
-
