@@ -1,13 +1,16 @@
-.PHONY: clean
+.PHONY: clean install
+
+CXX      ?= g++
+CXXFLAGS ?= -O2 -Wall -Wextra
 
 asdcontrol: asdcontrol.cpp
-	g++ -Og asdcontrol.cpp -o asdcontrol
+	$(CXX) $(CXXFLAGS) asdcontrol.cpp -o asdcontrol
 
 debug: asdcontrol.cpp FORCE
-	g++ -Og -g asdcontrol.cpp -o asdcontrol
+	$(CXX) -Og -g asdcontrol.cpp -o asdcontrol
 
 clean:
-	rm -f asdcontrols
+	rm -f asdcontrol
 
 install: asdcontrol
 	cp asdcontrol /usr/local/bin/asdcontrol
