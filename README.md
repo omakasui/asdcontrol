@@ -1,9 +1,10 @@
+> [!NOTE]
+> This is a fork of asdcontrol that aims to maintain support, as the original project is now archived.
 
 # Apple Display Brightness Control
-
 A simple program to control the brightness of Apple thunderbolt displays (Pro Display XDR, Studio Display) on Linux.
 
-Based on acdcontrol by Pavel Gurevich.
+Based on acdcontrol by Pavel Gurevich and [asdcontrol](https://github.com/nikosdion/asdcontrol) by [nikosdion](https://github.com/nikosdion).
 
 ## Compiling
 
@@ -15,7 +16,9 @@ Use `sudo make install` to install the compiled program in `/usr/local/bin/asdco
 
 ## Usage
 
-  ./asdcontrol [--silent|-s] [--brief|-b] [--help|-h] [--about|-a] [--detect|-d] [--list-all|-l] <hid device(s)> [<brightness>]
+```sh
+./asdcontrol [--silent|-s] [--brief|-b] [--help|-h] [--about|-a] [--detect|-d] [--list-all|-l] <hid device(s)> [<brightness>]
+```
 
 ### Parameters
 
