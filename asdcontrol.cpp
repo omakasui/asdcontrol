@@ -61,6 +61,7 @@ const int APPLE                           = 0x05ac;
 // Supported monitors
 const int STUDIO_DISPLAY_27               = 0x1114;
 const int STUDIO_DISPLAY_27_2026          = 0x1118;
+const int STUDIO_DISPLAY_XDR_2026         = 0x1116;
 const int PRO_XDR_DISPLAY_32              = 0x9243;
 
 // Forward Declarations
@@ -681,6 +682,9 @@ void init_device_database()
 
     supportedDevices.insert ( DeviceId ( APPLE, STUDIO_DISPLAY_27_2026,
                                          "Apple Studio Display (2026, 27\")", 400, 60000 ) );
+
+    supportedDevices.insert ( DeviceId ( APPLE, STUDIO_DISPLAY_XDR_2026,
+                                         "Apple Studio Display XDR (2026)", 400, 60000 ) );
 }
 
 void dump_supported ()
