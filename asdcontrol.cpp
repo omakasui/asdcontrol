@@ -42,7 +42,7 @@ using namespace std;
 #define HID_MAX_APPLICATIONS	16
 
 // Current version
-#define VERSION "0.5"
+#define VERSION "0.6.0"
 
 // Operation modes for this software
 const int USAGE_MODE_GET = 0;
